@@ -38,16 +38,23 @@ Lingly Academy est une plateforme éducative moderne développée en **React**, 
 
 src/
 ├── firebase/
-│   └── config.js          
+│   └── config.js
 ├── contexts/
-│   └── AuthContext.jsx   
+│   └── AuthContext.jsx
 ├── pages/
-│   ├── Login.jsx         
-│   ├── Register.jsx       
-│   ├── Auth.css           
-│   ├── Navbar.jsx         
+│   ├── student/
+│   │   ├── Student.css
+│   │   ├── StudentLayout.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── MyCourses.jsx
+│   │   ├── Planning.jsx
+│   │   └── Results.jsx
+│   ├── Auth.css
+│   ├── Login.jsx
+│   ├── Register.jsx
+│   ├── Navbar.jsx   ← remplacer l'ancien
 │   └── ...
-└── App.jsx                
+└── App.jsx          ← remplacer par la nouvelle version             
 
 ##  Installation et lancement
 
