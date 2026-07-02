@@ -1,58 +1,60 @@
 // src/pages/Navbar.jsx
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-
-const LINKS = [
-  { path: "/",        label: "Accueil" },
-  { path: "/cours",   label: "Cours" },
-  { path: "/examens", label: "Examens" },
-  { path: "/tarifs",  label: "Tarifs" },
-  { path: "/contact", label: "Contact" },
+import { useAuth, isAdminRole, isStudentRole } from "../contexts/AuthContext";
+import "./Navbar.css";
+// ─── NAV LINKS par contexte ────────────────────────────────────────────────────
+const PUBLIC_LINKS = [
+  { path: "/",        label: "Accueil"  },
+  { path: "/cours",   label: "Cours"    },
+  { path: "/examens", label: "Examens"  },
+  { path: "/tarifs",  label: "Tarifs"   },
+  { path: "/contact", label: "Contact"  },
 ];
 
-// ─── Initiales de l'utilisateur pour l'avatar ─────────────────────────────────
-const getInitials = (nom) => {
-  if (!nom) return "?";
-  const parts = nom.trim().split(" ");
-  return parts.length >= 2
-    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    : parts[0].slice(0, 2).toUpperCase();
-};
+const STUDENT_LINKS = [
+  { path: "/dashboard",            label: " Accueil"   },
+  { path: "/dashboard/cours",      label: " Mes cours" },
+  { path: "/dashboard/planning",   label: " Planning"  },
+  { path: "/dashboard/resultats",  label: " Résultats" },
+];
 
+const ADMIN_LINKS = [
+  { path: "/admin",           label: " Dashboard"  },
+  { path: "/admin/students",  label: " Étudiants" },
+  { path: "/admin/lessons",   label: " Leçons"     },
+  { path: "/admin/schedule",  label: " Planning"   },
+];
+
+// ─── NAVBAR ───────────────────────────────────────────────────────────────────
 const Navbar = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { currentUser, userProfile, logout } = useAuth();
-
   const [logoError, setLogoError] = useState(false);
-  const [menuOpen, setMenuOpen]   = useState(false);
+  const [menuOpen,  setMenuOpen]  = useState(false);
+
+  const isAdmin   = isAdminRole(userProfile);
+  const isStudent = isStudentRole(userProfile);
+  const isLogged  = !!currentUser;
+
+  // Choisit les liens selon le contexte
+  const links = isAdmin ? ADMIN_LINKS : isStudent ? STUDENT_LINKS : PUBLIC_LINKS;
 
   const handleLogout = async () => {
-    setMenuOpen(false);
     await logout();
     navigate("/");
   };
 
-  // Nom affiché : profil Firestore > Firebase displayName > email
-  const displayName =
-    userProfile?.nom ||
-    currentUser?.displayName ||
-    currentUser?.email?.split("@")[0] ||
-    "Mon compte";
-
   return (
     <nav className="navbar">
       <div className="navbar-inner">
+
         {/* ── Logo ── */}
-        <Link to="/" className="navbar-logo">
+        <Link to={isAdmin ? "/admin" : isStudent ? "/dashboard" : "/"} className="navbar-logo">
           {!logoError ? (
-            <img
-              src="/logo.png"
-              alt="Lingly Academy"
-              className="logo-img"
-              onError={() => setLogoError(true)}
-            />
+            <img src="/logo.png" alt="Lingly Academy" className="logo-img"
+              onError={() => setLogoError(true)} />
           ) : (
             <div className="logo-fallback">
               <span className="logo-fox">🦊</span>
@@ -64,9 +66,9 @@ const Navbar = () => {
           )}
         </Link>
 
-        {/* ── Liens nav ── */}
+        {/* ── Nav links (desktop) ── */}
         <ul className="nav-links">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <li key={link.path}>
               <Link
                 to={link.path}
@@ -78,114 +80,91 @@ const Navbar = () => {
           ))}
         </ul>
 
-        {/* ── Actions ── */}
+        {/* ── Actions droite ── */}
         <div className="nav-actions">
-          {currentUser ? (
-            /* Utilisateur connecté : avatar + menu déroulant */
-            <div style={{ position: "relative" }}>
+          {!isLogged ? (
+            /* Pas connecté */
+            <>
+              <Link to="/connexion"   className="btn btn--outline-orange">Se connecter</Link>
+              <Link to="/inscription" className="btn btn--grad">Commencer</Link>
+            </>
+          ) : (
+            /* Connecté — avatar + menu déroulant */
+            <div className="nav-user-menu">
               <button
+                className="nav-user-btn"
                 onClick={() => setMenuOpen((o) => !o)}
-                style={{
-                  display: "flex", alignItems: "center", gap: ".5rem",
-                  background: "none", border: "none", cursor: "pointer",
-                  padding: "4px",
-                }}
               >
-                {/* Avatar initiales */}
-                <div style={{
-                  width: 40, height: 40, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #F5A623 0%, #E85D04 100%)",
-                  color: "#fff", fontFamily: "var(--font-display)",
-                  fontWeight: 900, fontSize: ".95rem",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                }}>
-                  {getInitials(displayName)}
+                <div className="nav-avatar">
+                  {(userProfile?.nom || currentUser.email || "U").charAt(0).toUpperCase()}
                 </div>
-                {/* Nom raccourci */}
-                <span style={{
-                  fontFamily: "var(--font-display)", fontWeight: 700,
-                  fontSize: ".9rem", color: "var(--ink)", maxWidth: 120,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {displayName.split(" ")[0]}
+                <span className="nav-user-name">
+                  {userProfile?.nom?.split(" ")[0] || currentUser.email?.split("@")[0]}
                 </span>
-                <span style={{ color: "var(--ink-soft)", fontSize: ".8rem" }}>▾</span>
+                <span className="nav-chevron">{menuOpen ? "▲" : "▼"}</span>
               </button>
 
-              {/* Menu déroulant */}
               {menuOpen && (
-                <div style={{
-                  position: "absolute", top: "calc(100% + 8px)", right: 0,
-                  background: "#fff", borderRadius: 14, minWidth: 200,
-                  boxShadow: "0 14px 44px rgba(26,26,46,.16)",
-                  border: "1px solid #e8eaf2", overflow: "hidden", zIndex: 200,
-                }}>
-                  {/* Info utilisateur */}
-                  <div style={{ padding: "1rem 1.1rem", borderBottom: "1px solid #e8eaf2" }}>
-                    <p style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: ".95rem", color: "var(--ink)" }}>
-                      {displayName}
-                    </p>
-                    <p style={{ fontSize: ".8rem", color: "var(--ink-soft)", marginTop: ".15rem" }}>
-                      {userProfile?.role === "teacher" ? "👨‍🏫 Professeur" : "🎒 Étudiant"}
-                    </p>
+                <div className="nav-dropdown" onClick={() => setMenuOpen(false)}>
+                  {/* Badge rôle */}
+                  <div className="nav-dropdown-header">
+                    <span className={`nav-role-badge ${isAdmin ? "nav-role-badge--admin" : "nav-role-badge--student"}`}>
+                      {isAdmin ? "👨‍🏫 Professeur" : "👩‍🎓 Étudiant"}
+                    </span>
+                    <span className="nav-dropdown-email">{currentUser.email}</span>
                   </div>
 
-                  {/* Lien tableau de bord selon rôle */}
-                  <Link
-                    to={userProfile?.role === "teacher" ? "/admin" : "/dashboard"}
-                    onClick={() => setMenuOpen(false)}
-                    style={{
-                      display: "block", padding: ".75rem 1.1rem",
-                      textDecoration: "none", color: "var(--ink)",
-                      fontFamily: "var(--font-display)", fontWeight: 700, fontSize: ".9rem",
-                      transition: "background .15s",
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = "#F0F4FF"}
-                    onMouseLeave={(e) => e.target.style.background = "none"}
-                  >
-                    📊 Mon tableau de bord
-                  </Link>
+                  <div className="nav-dropdown-divider" />
 
-                  {/* Déconnexion */}
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      width: "100%", background: "none", border: "none",
-                      padding: ".75rem 1.1rem", textAlign: "left",
-                      fontFamily: "var(--font-display)", fontWeight: 700, fontSize: ".9rem",
-                      color: "#E85D04", cursor: "pointer",
-                      borderTop: "1px solid #e8eaf2",
-                      transition: "background .15s",
-                    }}
-                    onMouseEnter={(e) => e.target.style.background = "#FBE6C7"}
-                    onMouseLeave={(e) => e.target.style.background = "none"}
-                  >
+                  {/* Liens du dashboard */}
+                  {(isAdmin ? ADMIN_LINKS : STUDENT_LINKS).map((link) => (
+                    <Link key={link.path} to={link.path} className="nav-dropdown-item">
+                      {link.label}
+                    </Link>
+                  ))}
+
+                  <div className="nav-dropdown-divider" />
+
+                  <button className="nav-dropdown-item nav-dropdown-item--danger" onClick={handleLogout}>
                     🚪 Se déconnecter
                   </button>
                 </div>
               )}
             </div>
-          ) : (
-            /* Utilisateur non connecté */
-            <>
-              <Link to="/connexion" className="btn btn--outline-orange">
-                Se connecter
-              </Link>
-              <Link to="/inscription" className="btn btn--grad">
-                Commencer
-              </Link>
-            </>
           )}
+
+          {/* Burger mobile */}
+          <button className="nav-burger" onClick={() => setMenuOpen((o) => !o)}>
+            {menuOpen ? "✕" : "☰"}
+          </button>
         </div>
       </div>
 
-      {/* Ferme le menu si on clique ailleurs */}
+      {/* ── Mobile menu ── */}
       {menuOpen && (
-        <div
-          onClick={() => setMenuOpen(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 150 }}
-        />
+        <div className="nav-mobile">
+          {links.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`nav-mobile-link ${pathname === link.path ? "nav-mobile-link--active" : ""}`}
+              onClick={() => setMenuOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {isLogged && (
+            <button className="nav-mobile-link nav-mobile-link--danger" onClick={handleLogout}>
+              🚪 Se déconnecter
+            </button>
+          )}
+          {!isLogged && (
+            <>
+              <Link to="/connexion"   className="nav-mobile-link" onClick={() => setMenuOpen(false)}>Se connecter</Link>
+              <Link to="/inscription" className="nav-mobile-link" onClick={() => setMenuOpen(false)}>S'inscrire</Link>
+            </>
+          )}
+        </div>
       )}
     </nav>
   );
