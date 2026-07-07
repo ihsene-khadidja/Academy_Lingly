@@ -8,8 +8,8 @@ import {
   collection, getDocs, addDoc, updateDoc, deleteDoc,
   doc, query, orderBy, serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from "../../firebase/config";
+import { db } from "../../firebase/config";
+import { uploadToSupabase } from "../../utils/uploadToSupabase";
 import AdminLayout from "./AdminLayout";
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
@@ -76,23 +76,23 @@ const LessonModal = ({ lesson, langue, niveau, groupe, onSave, onClose }) => {
 
   const ft = FILE_TYPES.find((f) => f.type === form.type) || FILE_TYPES[0];
 
-  // Upload vers Firebase Storage avec progression
-  const uploadFile = (selectedFile) => {
-    return new Promise((resolve, reject) => {
-      const path = `lessons/${langue}/${niveau}/${groupe}/${Date.now()}_${selectedFile.name}`;
-      const storageRef = ref(storage, path);
-      const task = uploadBytesResumable(storageRef, selectedFile);
-      task.on(
-        "state_changed",
-        (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-        reject,
-        async () => {
-          const url = await getDownloadURL(task.snapshot.ref);
-          resolve({ url, path });
-        }
-      );
-    });
-  };
+const uploadFile = async (selectedFile) => {
+  setUploading(true);
+  setProgress(10);
+
+  try {
+    const url = await uploadToSupabase(selectedFile);
+
+    setProgress(100);
+
+    return {
+      url,
+      path: ""
+    };
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -161,7 +161,7 @@ const LessonModal = ({ lesson, langue, niveau, groupe, onSave, onClose }) => {
             ) : (
               <label className="a-label">
                 {ft.emoji} Fichier {ft.label}
-                <span className="a-label-hint">Sera stocké sur Firebase Storage</span>
+                <span className="a-label-hint">Sera stocké sur Supabase Storage</span>
                 <input
                   type="file"
                   accept={ft.accept || "*"}
@@ -216,7 +216,7 @@ const ConfirmDelete = ({ lesson, onConfirm, onClose }) => {
           <div className="a-confirm-icon">🗑️</div>
           <p className="a-confirm-msg">
             Supprimer <strong>« {lesson.titre} »</strong> ?<br />
-            <span style={{ fontSize:".82rem" }}>Le fichier sera aussi supprimé de Firebase Storage.</span>
+            <span style={{ fontSize:".82rem" }}>Le fichier sera aussi supprimé de Supabase Storage.</span>
           </p>
           <div className="a-confirm-actions">
             <button className="btn btn--ghost" onClick={onClose}>Annuler</button>
@@ -310,7 +310,7 @@ const Lessons = () => {
           desc:        form.desc || "",
           type:        form.type,
           fileUrl:     form.fileUrl || "",
-          storagePath: form.storagePath || selLesson.storagePath || "",
+          storagePath: "",
           updatedAt:   serverTimestamp(),
         });
       } else {
@@ -322,7 +322,7 @@ const Lessons = () => {
           niveau:      form.niveau,
           groupe:      form.groupe,
           fileUrl:     form.fileUrl || "",
-          storagePath: form.storagePath || "",
+          storagePath: "",
           createdAt:   serverTimestamp(),
         });
       }
@@ -337,13 +337,7 @@ const Lessons = () => {
   const handleDelete = async (lesson) => {
     try {
       // Supprimer le fichier de Storage si existant
-      if (lesson.storagePath) {
-        try {
-          await deleteObject(ref(storage, lesson.storagePath));
-        } catch (e) {
-          console.warn("Fichier Storage introuvable:", e.message);
-        }
-      }
+      
       await deleteDoc(doc(db, "lessons", lesson.id));
       await loadAll();
     } catch (err) {
@@ -522,7 +516,7 @@ const Lessons = () => {
                           {c.fileUrl && (
                             <a href={c.fileUrl} target="_blank" rel="noopener noreferrer"
                               className="btn btn--ghost btn--sm">
-                              {c.type === "link" ? "🔗 Ouvrir" : "⬇️ Télécharger"}
+                              {c.type === "link" ? "🔗 Ouvrir" : " Télécharger"}
                             </a>
                           )}
                           <button className="btn btn--ghost btn--sm"
