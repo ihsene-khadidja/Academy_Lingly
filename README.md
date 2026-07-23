@@ -20,25 +20,25 @@
 
 **LINGL** est une application web développée avec **React** et **Vite**, offrant deux espaces distincts :
 
-- 🎓 **Espace Étudiant** — inscription, connexion, consultation des cours, planning, résultats d'examens et tarifs.
-- 🛠️ **Espace Administrateur** — gestion des leçons, du planning et des étudiants depuis un tableau de bord dédié.
+-  **Espace Étudiant** — inscription, connexion, consultation des cours, planning, résultats d'examens et tarifs.
+-  **Espace Administrateur** — gestion des leçons, du planning et des étudiants depuis un tableau de bord dédié.
 
 L'authentification est gérée via **Firebase**, tandis que **Supabase** est utilisé comme backend pour le stockage et la gestion des données.
 
 ---
 
-## 🚀 Fonctionnalités
+##  Fonctionnalités
 
 | Espace | Fonctionnalités |
 |--------|------------------|
-| 👤 Étudiant | Connexion / Inscription, Tableau de bord, Mes cours, Planning, Résultats d'examens, Tarifs, Contact |
-| 🧑‍💼 Administrateur | Tableau de bord, Gestion des leçons, Gestion du planning, Gestion des étudiants |
-| 🔐 Authentification | Connexion sécurisée via Firebase (`AuthContext`) |
-| ☁️ Backend | Stockage et requêtes de données via Supabase |
+|  Étudiant | Connexion / Inscription, Tableau de bord, Mes cours, Planning, Résultats d'examens, Tarifs, Contact |
+| Administrateur | Tableau de bord, Gestion des leçons, Gestion du planning, Gestion des étudiants |
+|  Authentification | Connexion sécurisée via Firebase (`AuthContext`) |
+|  Backend | Stockage et requêtes de données via Supabase |
 
 ---
 
-## 🏗️ Stack technique
+##  Stack technique
 
 - **Frontend** : React + Vite (HMR ultra-rapide)
 - **Authentification** : Firebase
@@ -48,7 +48,7 @@ L'authentification est gérée via **Firebase**, tandis que **Supabase** est uti
 
 ---
 
-## 📁 Structure du projet
+##  Structure du projet
 
 ```
 src/
@@ -88,7 +88,7 @@ src/
 
 ---
 
-## ⚙️ Installation
+##  Installation
 
 ### Prérequis
 
@@ -135,7 +135,7 @@ src/
 
 ---
 
-## 🧪 Scripts disponibles
+##  Scripts disponibles
 
 | Commande | Description |
 |----------|--------------|
@@ -146,7 +146,7 @@ src/
 
 ---
 
-## 🤝 Contribuer
+##  Contribuer
 
 Les contributions sont les bienvenues !
 
@@ -158,7 +158,7 @@ Les contributions sont les bienvenues !
 
 ---
 
-## 📄 Licence
+##  Licence
 
 Ce projet est sous licence MIT — voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
@@ -166,6 +166,6 @@ Ce projet est sous licence MIT — voir le fichier [LICENSE](LICENSE) pour plus 
 
 <div align="center">
 
-Développé avec ❤️ en React + Vite
+
 
 </div>
