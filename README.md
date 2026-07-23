@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📚 LINGL — Plateforme d'Apprentissage en Ligne
+#  LINGL — Plateforme d'Apprentissage en Ligne
 
 **Une plateforme e-learning moderne connectant étudiants et administrateurs**
 
@@ -16,7 +16,7 @@
 
 ---
 
-## ✨ Aperçu
+##  Aperçu
 
 **LINGL** est une application web développée avec **React** et **Vite**, offrant deux espaces distincts :
 
