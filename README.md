@@ -64,20 +64,20 @@ src/
 │   │   ├── Schedule.jsx
 │   │   └── Students.jsx
 │   └── student/
-│       ├── StudentLayout.jsx
-│       ├── Dashboard.jsx
-│       ├── InfoEleve.jsx
-│       ├── MyCourses.jsx
-│       ├── Planning.jsx
-│       ├── Results.jsx
-│       ├── Home.jsx
-│       ├── Login.jsx
-│       ├── Register.jsx
-│       ├── Courses.jsx
-│       ├── Examens.jsx
-│       ├── Tarifs.jsx
-│       ├── Contact.jsx
-│       └── Navbar.jsx
+│   |   ├── StudentLayout.jsx
+│   |   ├── Dashboard.jsx
+│   |   ├── InfoEleve.jsx
+│   |   ├── MyCourses.jsx
+│   |   ├── Planning.jsx
+│   |   ├── Results.jsx
+│   ├── Home.jsx
+│   ├── Login.jsx
+│   ├── Register.jsx
+│   ├── Courses.jsx
+│   ├── Examens.jsx
+│   ├── Tarifs.jsx
+│   ├── Contact.jsx
+│   └── Navbar.jsx
 ├── services/
 │   └── supabase.js            # Client Supabase
 ├── utils/
