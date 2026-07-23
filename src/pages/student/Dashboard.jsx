@@ -6,6 +6,28 @@ import { db } from "../../firebase/config";
 import { useAuth } from "../../contexts/AuthContext";
 import StudentLayout from "./StudentLayout";
 
+// ─── Un(e) étudiant(e) peut appartenir à un ou plusieurs groupes, et le
+// profil Firestore peut stocker ça de plusieurs façons :
+//   groupes: ["G1","G2"]                        (tableau de noms)
+//   groupes: [{ nom: "G1", langue, niveau }, …]  (objets, clé "nom")
+//   groupes: [{ groupe: "G1", … }, …]            (variante, clé "groupe")
+//   groupe: "G1"                                 (ancien champ unique)
+// Avant, ce fichier supposait que "groupes" était toujours un tableau de
+// textes simples : si c'était en réalité un tableau d'objets, `.split("-")`
+// plantait (les objets n'ont pas cette méthode) → React arrête tout
+// l'affichage → page blanche. On normalise donc toujours vers un tableau
+// de NOMS (chaînes) avant de s'en servir.
+function getGroupNames(profile) {
+  if (!profile) return [];
+  if (Array.isArray(profile.groupes)) {
+    return profile.groupes
+      .map((g) => (typeof g === "string" ? g : g?.nom || g?.groupe || g?.name || g?.id || null))
+      .filter(Boolean);
+  }
+  if (profile.groupe) return [profile.groupe];
+  return [];
+}
+
 // ─── COULEURS PAR LANGUE ──────────────────────────────────────────────────────
 const LANG_DOT = {
   "Anglais":  "#4A6CF7", "Français": "#F5A623",
@@ -122,12 +144,8 @@ const ProfileCard = ({ userProfile, email }) => {
       : parts[0].slice(0, 2).toUpperCase();
   };
 
-  // Groupes : supporte tableau ou champ unique
-  const groupes = userProfile?.groupes?.length
-    ? userProfile.groupes
-    : userProfile?.groupe
-      ? [userProfile.groupe]
-      : [];
+  // Groupes : toujours normalisés en tableau de NOMS (chaînes)
+  const groupes = getGroupNames(userProfile);
 
   return (
     <div className="s-card">
@@ -137,7 +155,7 @@ const ProfileCard = ({ userProfile, email }) => {
         <p className="profile-email">{email}</p>
         <div className="profile-rows">
           <div className="profile-row">
-            <span>🌍</span>
+            <span></span>
             <span>
               <strong>Langue(s) : </strong>
               {groupes.length
@@ -146,21 +164,21 @@ const ProfileCard = ({ userProfile, email }) => {
             </span>
           </div>
           <div className="profile-row">
-            <span>👥</span>
+            <span></span>
             <span>
               <strong>Groupe(s) : </strong>
               {groupes.length ? groupes.join(", ") : "Non assigné"}
             </span>
           </div>
           <div className="profile-row">
-            <span>📊</span>
+            <span></span>
             <span>
               <strong>Niveau : </strong>
               {userProfile?.niveau || "Non assigné"}
             </span>
           </div>
           <div className="profile-row">
-            <span>👨‍🏫</span>
+            <span></span>
             <span>
               <strong>Professeur : </strong>
               {userProfile?.professeur || "Non assigné"}
@@ -188,12 +206,10 @@ const Dashboard = () => {
       try {
         const today = new Date().toISOString().split("T")[0];
 
-        // Groupes de l'étudiant (tableau ou champ unique)
-        const groupes = userProfile.groupes?.length
-          ? userProfile.groupes
-          : userProfile.groupe
-            ? [userProfile.groupe]
-            : [];
+        // Groupes de l'étudiant, toujours normalisés en tableau de NOMS
+        // (chaînes) — Firestore "where(..., 'in', groupes)" a besoin de
+        // valeurs simples, pas d'objets.
+        const groupes = getGroupNames(userProfile);
 
         if (groupes.length) {
           // Prochaines séances (toutes les langues confondues)
