@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useMemo } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useAuth } from "../../contexts/AuthContext";
 import StudentLayout from "./StudentLayout";
@@ -35,13 +34,18 @@ const formatDateComplete = (dateStr) => {
 // ─── Un(e) étudiant(e) peut appartenir à un ou plusieurs groupes. On gère les
 // formats possibles du profil Firestore pour rester compatible :
 //   groupes: ["G1","G2"]                        (tableau de noms)
-//   groupes: [{ langue, niveau, groupe }, …]     (tableau d'objets enrichis)
+//   groupes: [{ nom: "G1", langue, niveau }, …]  (objets copiés depuis la
+//                                                  collection "groups" → clé "nom")
+//   groupes: [{ groupe: "G1", … }, …]            (variante avec la clé "groupe")
 //   groupe: "G1"                                 (ancien champ unique)
+// On essaie donc toutes les clés courantes (nom / groupe / name / id) avant
+// d'abandonner : c'est ce qui provoquait un "Aucun groupe assigné" alors que
+// l'étudiant(e) a bien des groupes assignés côté admin.
 function getGroupNames(profile) {
   if (!profile) return [];
   if (Array.isArray(profile.groupes)) {
     return profile.groupes
-      .map((g) => (typeof g === "string" ? g : g?.groupe))
+      .map((g) => (typeof g === "string" ? g : g?.nom || g?.groupe || g?.name || g?.id || null))
       .filter(Boolean);
   }
   if (profile.groupe) return [profile.groupe];
@@ -120,12 +124,6 @@ const Planning = () => {
       try {
         const q = query(collection(db, "sessions"));
         const snap = await getDocs(q);
-        console.log("Groupes :", userGroups);
-console.log("Nombre :", snap.size);
-
-snap.forEach((doc) => {
-    console.log(doc.data());
-});
         setRawSessions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error("Erreur planning :", err);
@@ -137,27 +135,28 @@ snap.forEach((doc) => {
     fetchSessions();
   }, [groupKey]);
 
-  // Séances hebdomadaires (normale) : triées par jour de semaine puis heure.
-  // Affichées avec juste le nom du jour — pas de date précise, elles se
-  // répètent chaque semaine.
+  // Séances hebdomadaires (normale) : uniquement celles des groupes de
+  // l'étudiant, triées par jour de semaine puis heure. Affichées avec juste
+  // le nom du jour — pas de date précise, elles se répètent chaque semaine.
   const normales = useMemo(() => {
     return rawSessions
-      .filter((s) => s.type === "normale" && s.jour)
+      .filter((s) => s.type === "normale" && s.jour && userGroups.includes(s.groupe))
       .sort((a, b) =>
         (JOUR_INDEX[a.jour] ?? 9) - (JOUR_INDEX[b.jour] ?? 9) ||
         (a.heureDebut || "").localeCompare(b.heureDebut || "")
       );
-  }, [rawSessions]);
+  }, [rawSessions, userGroups]);
 
-  // Remplacements À VENIR (date >= aujourd'hui) : triés chronologiquement.
+  // Remplacements À VENIR (date >= aujourd'hui), pour les groupes de
+  // l'étudiant uniquement : triés chronologiquement.
   const remplacements = useMemo(() => {
     const todayISO = toISODate(new Date());
     return rawSessions
-      .filter((s) => s.type === "remplacement" && s.date >= todayISO)
+      .filter((s) => s.type === "remplacement" && s.date >= todayISO && userGroups.includes(s.groupe))
       .sort((a, b) =>
         a.date.localeCompare(b.date) || (a.heureDebut || "").localeCompare(b.heureDebut || "")
       );
-  }, [rawSessions]);
+  }, [rawSessions, userGroups]);
 
   if (!loading && !userGroups.length) return (
     <StudentLayout title="Mon planning"><EmptyPlanning /></StudentLayout>
