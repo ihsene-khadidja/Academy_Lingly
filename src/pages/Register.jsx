@@ -1,4 +1,10 @@
 // src/pages/Register.jsx
+// Inscription publique = élève uniquement. Les comptes prof et admin sont
+// créés depuis l'espace admin (page Profs), jamais en libre-service.
+// Remarque : même dans l'ancienne version de cette page, le rôle "Professeur"
+// choisi ici n'était jamais réellement appliqué — signup()/loginWithGoogle()
+// imposent toujours "student" et ignorent tout paramètre role envoyé. Ce
+// sélecteur ne changeait donc déjà rien en pratique ; il est retiré ici.
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,62 +20,25 @@ const GoogleIcon = () => (
   </svg>
 );
 
-// ─── PANNEAU GAUCHE ───────────────────────────────────────────────────────────
-const LeftPanel = () => (
-  <div className="auth-panel-left">
-    <Link to="/" className="auth-brand-logo">
-      <img
-        src="/logo.png"
-        alt="Lingly Academy"
-        className="logo-img"
-        onError={(e) => { e.target.style.display = "none"; }}
-      />
-      <span className="auth-brand-fox">🦊</span>
-      <div>
-        <div className="auth-brand-name">Lingly</div>
-        <div className="auth-brand-sub">Academy</div>
-      </div>
-    </Link>
+// ─── MESSAGES D'ERREUR FIREBASE ───────────────────────────────────────────────
+const getFirebaseError = (code) => {
+  const errors = {
+    "auth/email-already-in-use":   "Cet email est déjà utilisé. Connectez-vous ou changez d'email.",
+    "auth/invalid-email":          "L'adresse email n'est pas valide.",
+    "auth/weak-password":          "Le mot de passe est trop faible (6 caractères minimum).",
+    "auth/popup-closed-by-user":   "La fenêtre Google a été fermée. Réessayez.",
+    "auth/network-request-failed": "Problème de connexion réseau.",
+  };
+  return errors[code] || "Une erreur est survenue. Réessayez.";
+};
 
-    <h2 className="auth-panel-tagline">
-      Commencez<br />
-      à apprendre<br />
-      <span className="text-amber">aujourd'hui</span>
-    </h2>
-    <p className="auth-panel-desc">
-      Créez votre compte en quelques secondes et accédez immédiatement
-      à des centaines d'exercices et de cours.
-    </p>
-
-    <ul className="auth-perks">
-      <li className="auth-perk">
-        <span className="auth-perk-icon">🎁</span>
-        Exercices 100% gratuits dès l'inscription
-      </li>
-      <li className="auth-perk">
-        <span className="auth-perk-icon">👨‍🏫</span>
-        Suivis par de vrais professeurs
-      </li>
-      <li className="auth-perk">
-        <span className="auth-perk-icon">🌍</span>
-        6 langues : FR, EN, AR, TR, ES, DE
-      </li>
-    </ul>
-  </div>
-);
-
-// ─── FORMULAIRE D'INSCRIPTION ─────────────────────────────────────────────────
-const RegisterForm = () => {
+// ─── PAGE REGISTER ────────────────────────────────────────────────────────────
+const Register = () => {
   const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    nom: "",
-    email: "",
-    password: "",
-    confirm: "",
-  });
-  const [role, setRole] = useState("student");  // "student" | "teacher"
+  const [logoError, setLogoError] = useState(false);
+  const [form, setForm]       = useState({ nom: "", email: "", password: "", confirm: "" });
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -78,8 +47,8 @@ const RegisterForm = () => {
 
   // ── Validation ─────────────────────────────────────────────────────
   const validate = () => {
-    if (!form.nom.trim())           return "Veuillez entrer votre nom complet.";
-    if (form.password.length < 6)   return "Le mot de passe doit contenir au moins 6 caractères.";
+    if (!form.nom.trim())               return "Veuillez entrer votre nom complet.";
+    if (form.password.length < 6)       return "Le mot de passe doit contenir au moins 6 caractères.";
     if (form.password !== form.confirm) return "Les mots de passe ne correspondent pas.";
     return null;
   };
@@ -93,8 +62,8 @@ const RegisterForm = () => {
     setError("");
     setLoading(true);
     try {
-      await signup(form.email, form.password, form.nom.trim(), role);
-      navigate("/");   // Redirige vers l'accueil après inscription
+      await signup(form.email, form.password, form.nom.trim());
+      navigate("/dashboard");
     } catch (err) {
       setError(getFirebaseError(err.code));
     } finally {
@@ -107,8 +76,8 @@ const RegisterForm = () => {
     setError("");
     setLoading(true);
     try {
-      await loginWithGoogle(role);
-      navigate("/");
+      await loginWithGoogle();
+      navigate("/dashboard");
     } catch (err) {
       setError(getFirebaseError(err.code));
     } finally {
@@ -117,145 +86,114 @@ const RegisterForm = () => {
   };
 
   return (
-    <div className="auth-card">
-      <h1 className="auth-card-title">Créer un compte</h1>
-      <p className="auth-card-subtitle">
-        Déjà inscrit ? <Link to="/connexion">Se connecter</Link>
-      </p>
+    <div className="auth-page">
+      <div className="auth-bg-shape auth-bg-shape--1" />
+      <div className="auth-bg-shape auth-bg-shape--2" />
+      <div className="auth-bg-shape auth-bg-shape--3" />
 
-      {/* Sélecteur de rôle */}
-      <div style={{ marginBottom: "1.25rem" }}>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: ".9rem", fontWeight: 700, color: "var(--ink)", marginBottom: ".5rem" }}>
-          Je suis…
-        </p>
-        <div className="auth-role-group">
-          <button
-            type="button"
-            className={`auth-role-btn ${role === "student" ? "auth-role-btn--active" : ""}`}
-            onClick={() => setRole("student")}
-          >
-            🎒 Étudiant
-          </button>
-          <button
-            type="button"
-            className={`auth-role-btn ${role === "teacher" ? "auth-role-btn--active" : ""}`}
-            onClick={() => setRole("teacher")}
-          >
-            👨‍🏫 Professeur
-          </button>
-        </div>
-      </div>
+      <div className="auth-card">
+        <Link to="/" className="auth-brand-logo">
+          {!logoError ? (
+            <img
+              src="/logo.png"
+              alt="Lingly Academy"
+              className="logo-img"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <span className="auth-brand-fallback">Lingly Academy</span>
+          )}
+        </Link>
 
-      {/* Bouton Google */}
-      <button
-        type="button"
-        className="btn btn--google btn--block"
-        onClick={handleGoogle}
-        disabled={loading}
-        style={{ marginBottom: "1.25rem" }}
-      >
-        <GoogleIcon />
-        Continuer avec Google
-      </button>
-
-      <div className="auth-divider">ou avec votre email</div>
-
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label className="auth-label">
-          Nom complet
-          <input
-            type="text"
-            name="nom"
-            className="auth-input"
-            placeholder="Votre prénom et nom"
-            value={form.nom}
-            onChange={handleChange}
-            required
-            autoComplete="name"
-          />
-        </label>
-
-        <label className="auth-label">
-          Email
-          <input
-            type="email"
-            name="email"
-            className="auth-input"
-            placeholder="vous@email.com"
-            value={form.email}
-            onChange={handleChange}
-            required
-            autoComplete="email"
-          />
-        </label>
-
-        <label className="auth-label">
-          Mot de passe
-          <input
-            type="password"
-            name="password"
-            className="auth-input"
-            placeholder="6 caractères minimum"
-            value={form.password}
-            onChange={handleChange}
-            required
-            autoComplete="new-password"
-          />
-        </label>
-
-        <label className="auth-label">
-          Confirmer le mot de passe
-          <input
-            type="password"
-            name="confirm"
-            className={`auth-input ${form.confirm && form.confirm !== form.password ? "auth-input--error" : ""}`}
-            placeholder="Répétez le mot de passe"
-            value={form.confirm}
-            onChange={handleChange}
-            required
-            autoComplete="new-password"
-          />
-        </label>
-
-        {error && <p className="auth-error">⚠️ {error}</p>}
+        <h1 className="auth-card-title">Créer un compte</h1>
+        <p className="auth-card-subtitle">Rejoignez Lingly Academy et accédez à vos cours dès aujourd'hui.</p>
 
         <button
-          type="submit"
-          className="btn btn--grad btn--block"
+          type="button"
+          className="btn btn--google btn--block"
+          onClick={handleGoogle}
           disabled={loading}
-          style={{ marginTop: ".25rem" }}
         >
-          {loading ? "Création du compte…" : "Créer mon compte"}
+          <GoogleIcon />
+          Continuer avec Google
         </button>
-      </form>
 
-      <p className="auth-switch">
-        Déjà un compte ? <Link to="/connexion">Se connecter</Link>
-      </p>
+        <div className="auth-divider">ou avec votre email</div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
+            Nom complet
+            <input
+              type="text"
+              name="nom"
+              className="auth-input"
+              placeholder="Votre prénom et nom"
+              value={form.nom}
+              onChange={handleChange}
+              required
+              autoComplete="name"
+            />
+          </label>
+
+          <label className="auth-label">
+            Email
+            <input
+              type="email"
+              name="email"
+              className="auth-input"
+              placeholder="vous@email.com"
+              value={form.email}
+              onChange={handleChange}
+              required
+              autoComplete="email"
+            />
+          </label>
+
+          <label className="auth-label">
+            Mot de passe
+            <input
+              type="password"
+              name="password"
+              className="auth-input"
+              placeholder="6 caractères minimum"
+              value={form.password}
+              onChange={handleChange}
+              required
+              autoComplete="new-password"
+            />
+          </label>
+
+          <label className="auth-label">
+            Confirmer le mot de passe
+            <input
+              type="password"
+              name="confirm"
+              className={`auth-input ${form.confirm && form.confirm !== form.password ? "auth-input--error" : ""}`}
+              placeholder="Répétez le mot de passe"
+              value={form.confirm}
+              onChange={handleChange}
+              required
+              autoComplete="new-password"
+            />
+          </label>
+
+          {error && <p className="auth-error">{error}</p>}
+
+          <button
+            type="submit"
+            className="btn btn--grad btn--block"
+            disabled={loading}
+          >
+            {loading ? "Création du compte…" : "Créer mon compte"}
+          </button>
+        </form>
+
+        <p className="auth-switch">
+          Déjà un compte ? <Link to="/connexion">Se connecter</Link>
+        </p>
+      </div>
     </div>
   );
-};
-
-// ─── PAGE REGISTER ────────────────────────────────────────────────────────────
-const Register = () => (
-  <div className="auth-page">
-    <LeftPanel />
-    <div className="auth-panel-right">
-      <RegisterForm />
-    </div>
-  </div>
-);
-
-// ─── MESSAGES D'ERREUR FIREBASE ───────────────────────────────────────────────
-const getFirebaseError = (code) => {
-  const errors = {
-    "auth/email-already-in-use":   "Cet email est déjà utilisé. Connectez-vous ou changez d'email.",
-    "auth/invalid-email":          "L'adresse email n'est pas valide.",
-    "auth/weak-password":          "Le mot de passe est trop faible (6 caractères minimum).",
-    "auth/popup-closed-by-user":   "La fenêtre Google a été fermée. Réessayez.",
-    "auth/network-request-failed": "Problème de connexion réseau.",
-  };
-  return errors[code] || "Une erreur est survenue. Réessayez.";
 };
 
 export default Register;
