@@ -1,6 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth, isAdminRole, isStudentRole } from "./contexts/AuthContext";
+import { AuthProvider, useAuth, isAdminRole, isStudentRole, isProfRole } from "./contexts/AuthContext";
 
 // ── Pages publiques
 import Home     from "./pages/Home";
@@ -19,12 +19,21 @@ import Planning         from "./pages/student/Planning";
 import Results          from "./pages/student/Results";
 import InfoEleve        from "./pages/student/InfoEleve";
 
-// ── Pages admin / professeur (Phase 4) ✅
-// Fichiers réels : src/pages/admin/{Dashboard,Students,Lessons,Schedule,AdminLayout}.jsx
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminStudents  from "./pages/admin/Students";
-import AdminLessons   from "./pages/admin/Lessons";
-import AdminSchedule  from "./pages/admin/Schedule";
+// ── Pages admin (Phase 4) ✅
+// Fichiers réels : src/pages/admin/{Dashboard,Students,Lessons,Schedule,AdminLayout,Profs,AdminPresences}.jsx
+import AdminDashboard  from "./pages/admin/Dashboard";
+import AdminStudents   from "./pages/admin/Students";
+import AdminLessons    from "./pages/admin/Lessons";
+import AdminSchedule   from "./pages/admin/Schedule";
+import AdminProfs      from "./pages/admin/Profs";
+import AdminPresences  from "./pages/admin/AdminPresences";
+
+// ── Pages prof (Phase 5) ✅ nouveau — rôle "prof", distinct de l'admin
+// Fichiers réels : src/pages/prof/{ProfLayout,ProfDashboard,ProfPresence,ProfCours,ProfNotes}.jsx
+import ProfDashboard from "./pages/prof/ProfDashboard";
+import ProfPresence  from "./pages/prof/ProfPresence";
+import ProfCours     from "./pages/prof/ProfCours";
+import ProfNotes     from "./pages/prof/ProfNotes";
 
 // ─── ROUTE PROTÉGÉE ────────────────────────────────────────────────────────────
 const PrivateRoute = ({ children, type }) => {
@@ -49,6 +58,11 @@ const PrivateRoute = ({ children, type }) => {
     return <Navigate to="/" replace />;
   }
 
+  // ❌ Route prof → vérifie role "prof" ou "enseignant" (distinct de l'admin)
+  if (type === "prof" && !isProfRole(userProfile)) {
+    return <Navigate to="/" replace />;
+  }
+
   // ✅ Autorisé
   return children;
 };
@@ -62,6 +76,7 @@ const PublicOnlyRoute = ({ children }) => {
   // Si connecté → redirige vers le bon dashboard selon le rôle
   if (currentUser) {
     if (isAdminRole(userProfile)) return <Navigate to="/admin" replace />;
+    if (isProfRole(userProfile))  return <Navigate to="/prof" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -103,7 +118,7 @@ function App() {
 
           {/* ══════════════════════════════════════════════
               AUTH — login / inscription
-              Redirige vers /admin si prof, /dashboard si étudiant
+              Redirige vers /admin si admin, /prof si prof, /dashboard si étudiant
           ══════════════════════════════════════════════ */}
           <Route path="/connexion" element={
             <PublicOnlyRoute><Login /></PublicOnlyRoute>
@@ -142,8 +157,8 @@ function App() {
           } />
 
           {/* ══════════════════════════════════════════════
-              PHASE 4 — TABLEAU DE BORD ADMIN / PROFESSEUR ✅
-              role "Professeur" OU "teacher" OU "admin"
+              PHASE 4 — TABLEAU DE BORD ADMIN ✅
+              role "Professeur" (historique) OU "teacher" OU "admin"
           ══════════════════════════════════════════════ */}
           <Route path="/admin" element={
             <PrivateRoute type="admin"><AdminDashboard /></PrivateRoute>
@@ -156,6 +171,29 @@ function App() {
           } />
           <Route path="/admin/schedule" element={
             <PrivateRoute type="admin"><AdminSchedule /></PrivateRoute>
+          } />
+          <Route path="/admin/profs" element={
+            <PrivateRoute type="admin"><AdminProfs /></PrivateRoute>
+          } />
+          <Route path="/admin/presences" element={
+            <PrivateRoute type="admin"><AdminPresences /></PrivateRoute>
+          } />
+
+          {/* ══════════════════════════════════════════════
+              PHASE 5 — TABLEAU DE BORD PROF ✅ nouveau
+              role "prof" OU "enseignant" — distinct de l'admin
+          ══════════════════════════════════════════════ */}
+          <Route path="/prof" element={
+            <PrivateRoute type="prof"><ProfDashboard /></PrivateRoute>
+          } />
+          <Route path="/prof/presences" element={
+            <PrivateRoute type="prof"><ProfPresence /></PrivateRoute>
+          } />
+          <Route path="/prof/cours" element={
+            <PrivateRoute type="prof"><ProfCours /></PrivateRoute>
+          } />
+          <Route path="/prof/notes" element={
+            <PrivateRoute type="prof"><ProfNotes /></PrivateRoute>
           } />
 
           {/* ══════════════════════════════════════════════
