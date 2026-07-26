@@ -1,10 +1,14 @@
 // src/pages/Login.jsx
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/config";
+import { useAuth, isAdminRole, isProfRole } from "../contexts/AuthContext";
 import "./Auth.css";
 
 // ─── Icône Google ─────────────────────────────────────────────────────────────
+// Seule icône conservée : c'est un repère de marque fonctionnel (pas une
+// décoration), nécessaire pour que le bouton soit reconnaissable.
 const GoogleIcon = () => (
   <svg className="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -14,171 +18,22 @@ const GoogleIcon = () => (
   </svg>
 );
 
-// ─── PANNEAU GAUCHE ───────────────────────────────────────────────────────────
-const LeftPanel = () => (
-  <div className="auth-panel-left">
-    <Link to="/" className="auth-brand-logo">
-      <img
-        src="/logo.png"
-        alt="Lingly Academy"
-        className="logo-img"
-        onError={(e) => { e.target.style.display = "none"; }}
-      />
-      <div>
-       
-      </div>
-      
-    </Link>
+// ─── RÔLES ────────────────────────────────────────────────────────────────────
+// L'onglet choisi ici est un repère visuel uniquement (sous-titre affiché).
+// Le rôle réel utilisé pour la redirection vient toujours de Firestore —
+// voir resolveDashboard plus bas — donc peu importe l'onglet cliqué, la
+// personne atterrit toujours sur le bon espace.
+const ROLES = [
+  { key: "student", label: "Élève" },
+  { key: "prof",     label: "Professeur" },
+  { key: "admin",    label: "Admin" },
+];
 
-    <h2 className="auth-panel-tagline">
-      Bienvenue<br />
-      <span className="text-amber">dans Lingly</span>
-    </h2>
-    <p className="auth-panel-desc">
-      Connectez-vous pour accéder à vos cours, votre planning et vos résultats.
-    </p>
-
-    <ul className="auth-perks">
-      <li className="auth-perk">
-        <span className="auth-perk-icon">🎓</span>
-        Cours de A1 à C2 dans 6 langues
-      </li>
-      <li className="auth-perk">
-        <span className="auth-perk-icon">📅</span>
-        Planning de cours personnalisé
-      </li>
-      <li className="auth-perk">
-        <span className="auth-perk-icon">🏆</span>
-        Préparation IELTS, TOEFL, TCF, TEF
-      </li>
-    </ul>
-  </div>
-);
-
-// ─── FORMULAIRE DE CONNEXION ──────────────────────────────────────────────────
-const LoginForm = () => {
-  const { login, loginWithGoogle } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Redirige vers la page demandée, sinon vers l'accueil
-  const from = location.state?.from?.pathname || "/";
-
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
-  // ── Connexion Email / Mot de passe ──────────────────────────────────
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await login(form.email, form.password);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(getFirebaseError(err.code));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ── Connexion Google ────────────────────────────────────────────────
-  const handleGoogle = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      await loginWithGoogle();
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(getFirebaseError(err.code));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="auth-card">
-      <h1 className="auth-card-title">Se connecter</h1>
-      <p className="auth-card-subtitle">
-        Pas encore de compte ?{" "}
-        <Link to="/inscription">Créer un compte</Link>
-      </p>
-
-      {/* Bouton Google */}
-      <button
-        type="button"
-        className="btn btn--google btn--block"
-        onClick={handleGoogle}
-        disabled={loading}
-        style={{ marginBottom: "1.25rem" }}
-      >
-        <GoogleIcon />
-        Continuer avec Google
-      </button>
-
-      <div className="auth-divider">ou avec votre email</div>
-
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label className="auth-label">
-          Email
-          <input
-            type="email"
-            name="email"
-            className="auth-input"
-            placeholder="vous@email.com"
-            value={form.email}
-            onChange={handleChange}
-            required
-            autoComplete="email"
-          />
-        </label>
-
-        <label className="auth-label">
-          Mot de passe
-          <input
-            type="password"
-            name="password"
-            className="auth-input"
-            placeholder="••••••••"
-            value={form.password}
-            onChange={handleChange}
-            required
-            autoComplete="current-password"
-          />
-        </label>
-
-        {error && <p className="auth-error">⚠️ {error}</p>}
-
-        <button
-          type="submit"
-          className="btn btn--grad btn--block"
-          disabled={loading}
-          style={{ marginTop: ".25rem" }}
-        >
-          {loading ? "Connexion…" : "Se connecter"}
-        </button>
-      </form>
-
-      <p className="auth-switch">
-        Pas de compte ? <Link to="/inscription">S'inscrire</Link>
-      </p>
-    </div>
-  );
+const ROLE_INTRO = {
+  student: "Accédez à vos cours, votre planning et vos résultats.",
+  prof:    "Gérez vos groupes : présences, cours et suivi pédagogique.",
+  admin:   "Administration de Lingly Academy.",
 };
-
-// ─── PAGE LOGIN ────────────────────────────────────────────────────────────────
-const Login = () => (
-  <div className="auth-page">
-    <LeftPanel />
-    <div className="auth-panel-right">
-      <LoginForm />
-    </div>
-  </div>
-);
 
 // ─── MESSAGES D'ERREUR FIREBASE ───────────────────────────────────────────────
 const getFirebaseError = (code) => {
@@ -192,6 +47,163 @@ const getFirebaseError = (code) => {
     "auth/network-request-failed": "Problème de connexion réseau.",
   };
   return errors[code] || "Une erreur est survenue. Réessayez.";
+};
+
+// ─── PAGE LOGIN ────────────────────────────────────────────────────────────────
+const Login = () => {
+  const { login, loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [role, setRole]           = useState("student");
+  const [logoError, setLogoError] = useState(false);
+  const [form, setForm]           = useState({ email: "", password: "" });
+  const [error, setError]         = useState("");
+  const [loading, setLoading]     = useState(false);
+
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  // Détermine le tableau de bord à rejoindre à partir du VRAI rôle Firestore
+  // du compte (indépendant de l'onglet choisi ci-dessus).
+  const resolveDashboard = async (uid) => {
+    const snap = await getDoc(doc(db, "users", uid));
+    const profile = snap.exists() ? snap.data() : null;
+    if (isAdminRole(profile)) return "/admin";
+    if (isProfRole(profile))  return "/prof";
+    return "/dashboard";
+  };
+
+  const afterLogin = async (uid) => {
+    const from = location.state?.from?.pathname;
+    navigate(from || (await resolveDashboard(uid)), { replace: true });
+  };
+
+  // ── Connexion Email / Mot de passe ──────────────────────────────────
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const result = await login(form.email, form.password);
+      await afterLogin(result.user.uid);
+    } catch (err) {
+      setError(getFirebaseError(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Connexion Google ────────────────────────────────────────────────
+  const handleGoogle = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const result = await loginWithGoogle();
+      await afterLogin(result.user.uid);
+    } catch (err) {
+      setError(getFirebaseError(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-page">
+      {/* Formes floues en arrière-plan — donnent l'effet de profondeur/verre dépoli */}
+      <div className="auth-bg-shape auth-bg-shape--1" />
+      <div className="auth-bg-shape auth-bg-shape--2" />
+      <div className="auth-bg-shape auth-bg-shape--3" />
+
+      {/* Carte unique */}
+      <div className="auth-card">
+        <Link to="/" className="auth-brand-logo">
+          {!logoError ? (
+            <img
+              src="/logo.png"
+              alt="Lingly Academy"
+              className="logo-img"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <span className="auth-brand-fallback">Lingly Academy</span>
+          )}
+        </Link>
+
+        <div className="auth-role-tabs">
+          {ROLES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              className={`auth-role-tab ${role === r.key ? "auth-role-tab--active" : ""}`}
+              onClick={() => setRole(r.key)}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+
+        <h1 className="auth-card-title">Se connecter</h1>
+        <p className="auth-card-subtitle">{ROLE_INTRO[role]}</p>
+
+        <button
+          type="button"
+          className="btn btn--google btn--block"
+          onClick={handleGoogle}
+          disabled={loading}
+        >
+          <GoogleIcon />
+          Continuer avec Google
+        </button>
+
+        <div className="auth-divider">ou avec votre email</div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
+            Email
+            <input
+              type="email"
+              name="email"
+              className="auth-input"
+              placeholder="vous@email.com"
+              value={form.email}
+              onChange={handleChange}
+              required
+              autoComplete="email"
+            />
+          </label>
+
+          <label className="auth-label">
+            Mot de passe
+            <input
+              type="password"
+              name="password"
+              className="auth-input"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={handleChange}
+              required
+              autoComplete="current-password"
+            />
+          </label>
+
+          {error && <p className="auth-error">{error}</p>}
+
+          <button
+            type="submit"
+            className="btn btn--grad btn--block"
+            disabled={loading}
+          >
+            {loading ? "Connexion…" : "Se connecter"}
+          </button>
+        </form>
+
+        <p className="auth-switch">
+          Pas de compte ? <Link to="/inscription">S'inscrire</Link>
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default Login;
